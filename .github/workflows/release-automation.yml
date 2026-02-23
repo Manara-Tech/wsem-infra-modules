@@ -55,7 +55,7 @@ jobs:
             SOURCE_BRANCH="${{ github.head_ref }}"
           else
             # Extract branch name from the merge commit message
-            SOURCE_BRANCH=$(git log -1 --pretty=%s | grep -oP '(?<=from [^/]+/).*' || echo "")
+            SOURCE_BRANCH=$(git log -1 --pretty=%s | grep -oP '(?<=from .{1,100}/)(hotfix|feature|release)/[^ ]+' || echo "")
           fi
 
           echo "source_branch=${SOURCE_BRANCH}" >> "$GITHUB_OUTPUT"
