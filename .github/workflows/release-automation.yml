@@ -278,15 +278,19 @@ jobs:
           BRANCH="${{ needs.detect-bump.outputs.source_branch }}"
           BUMP="${{ needs.detect-bump.outputs.bump_type }}"
 
-          git tag \
-            --annotate "v${NEW}" \
-            --message "Release v${NEW}
+          if git rev-parse "v${NEW}" >/dev/null 2>&1; then
+            echo "Tag v${NEW} already exists, skipping."
+          else
+            git tag \
+              --annotate "v${NEW}" \
+              --message "Release v${NEW}
           Bump type : ${BUMP}
           Source    : ${BRANCH}
           Triggered : ${{ github.sha }}"
 
-          git push origin "v${NEW}"
-          echo "Tagged and pushed v${NEW}"
+            git push origin "v${NEW}"
+            echo "Tagged and pushed v${NEW}"
+          fi
 
       - name: Write job summary
         run: |
