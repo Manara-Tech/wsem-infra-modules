@@ -33,33 +33,26 @@ jobs:
   #  logic so both jobs share identical rules.
   # ═══════════════════════════════════════════
   detect-bump:
-    - name: Checkout repository
+    name: Detect Version Bump Type
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+
+    outputs:
+      bump_type:     ${{ steps.resolve.outputs.bump_type }}
+      source_branch: ${{ steps.resolve.outputs.source_branch }}
+
+    steps:
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-    name: Detect Version Bump Type
-    runs-on: ubuntu-latest
-
-    # Skip if the push was made by the bot itself (prevents infinite loop)
-    if: github.actor != 'github-actions[bot]'
-
-    outputs:
-      bump_type:   ${{ steps.resolve.outputs.bump_type }}
-      source_branch: ${{ steps.resolve.outputs.source_branch }}
-
-    steps:
       - name: Resolve source branch
         id: resolve
         run: |
-          # On a PR event, github.head_ref is the feature/hotfix/release branch.
-          # On a push-to-main (after merge), head_ref is empty, so we fall back
-          # to reading the merge commit message which GitHub formats as:
-          #   "Merge pull request #N from owner/branch-name"
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             SOURCE_BRANCH="${{ github.head_ref }}"
           else
-            # Extract branch name from the merge commit message
             COMMIT_MSG=$(git log -1 --pretty=%s)
             echo "Merge commit message: ${COMMIT_MSG}"
             SOURCE_BRANCH=$(echo "$COMMIT_MSG" | sed -n 's|.*from [^/]*/\(hotfix/[^ ]*\|feature/[^ ]*\|release/[^ ]*\).*|\1|p')
@@ -67,7 +60,6 @@ jobs:
 
           echo "source_branch=${SOURCE_BRANCH}" >> "$GITHUB_OUTPUT"
 
-          # ── Map branch prefix → bump type ──────────────────────────
           if [[ "$SOURCE_BRANCH" == hotfix/* ]]; then
             BUMP="patch"
           elif [[ "$SOURCE_BRANCH" == feature/* ]]; then
@@ -82,7 +74,7 @@ jobs:
 
           echo "bump_type=${BUMP}" >> "$GITHUB_OUTPUT"
           echo "### 🔍 Detected bump type: \`${BUMP}\` (from branch: \`${SOURCE_BRANCH}\`)" >> "$GITHUB_STEP_SUMMARY"
-
+          
   # ═══════════════════════════════════════════
   #  JOB 2 — PR PREVIEW
   #  Only runs on pull_request events.
