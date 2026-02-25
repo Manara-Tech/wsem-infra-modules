@@ -26,12 +26,12 @@ env:
 # ─────────────────────────────────────────────
 jobs:
 
-  # ═══════════════════════════════════════════
+  # -------------------------------------------
   #  JOB 1 — DETECT BUMP TYPE
   #  Runs on BOTH pr and push events.
   #  Centralises the branch-name → bump-type
   #  logic so both jobs share identical rules.
-  # ═══════════════════════════════════════════
+  # -------------------------------------------
 detect-bump:
     name: Detect Version Bump Type
     runs-on: ubuntu-latest
@@ -97,13 +97,13 @@ detect-bump:
           echo "bump_type=${BUMP}" >> "$GITHUB_OUTPUT"
           echo "### 🔍 Detected bump type: \`${BUMP}\` (from branch: \`${SOURCE_BRANCH}\`)" >> "$GITHUB_STEP_SUMMARY"
 
-  # ═══════════════════════════════════════════
+  # -------------------------------------------
   #  JOB 2 — PR PREVIEW
   #  Only runs on pull_request events.
   #  Shows contributors what version WOULD be
   #  released if this PR is merged. No changes
   #  are committed or tagged.
-  # ═══════════════════════════════════════════
+  # -------------------------------------------
   preview-version:
     name: Preview Next Version (PR Only)
     runs-on: ubuntu-latest
@@ -244,12 +244,12 @@ detect-bump:
               labels:       [label],
             });
 
-  # ═══════════════════════════════════════════
+  # -------------------------------------------
   #  JOB 3 — ACTUAL RELEASE
   #  Only runs on push to main (after merge).
   #  Reads release.yml, bumps version, commits,
   #  pushes, and creates the annotated Git tag.
-  # ═══════════════════════════════════════════
+  # -------------------------------------------
   create-release:
     name: Bump Version & Create Release Tag
     runs-on: ubuntu-latest
