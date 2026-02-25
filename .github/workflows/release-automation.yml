@@ -33,6 +33,11 @@ jobs:
   #  logic so both jobs share identical rules.
   # ═══════════════════════════════════════════
   detect-bump:
+    - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
     name: Detect Version Bump Type
     runs-on: ubuntu-latest
 
@@ -55,7 +60,9 @@ jobs:
             SOURCE_BRANCH="${{ github.head_ref }}"
           else
             # Extract branch name from the merge commit message
-            SOURCE_BRANCH=$(git log -1 --pretty=%s | grep -oP '(?<=from .{1,100}/)(hotfix|feature|release)/[^ ]+' || echo "")
+            COMMIT_MSG=$(git log -1 --pretty=%s)
+            echo "Merge commit message: ${COMMIT_MSG}"
+            SOURCE_BRANCH=$(echo "$COMMIT_MSG" | sed -n 's|.*from [^/]*/\(hotfix/[^ ]*\|feature/[^ ]*\|release/[^ ]*\).*|\1|p')
           fi
 
           echo "source_branch=${SOURCE_BRANCH}" >> "$GITHUB_OUTPUT"
