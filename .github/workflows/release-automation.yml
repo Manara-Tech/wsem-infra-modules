@@ -58,6 +58,27 @@ jobs:
             if [ -n "$SOURCE_BRANCH" ]; then
               echo "Resolved source branch from PR: ${SOURCE_BRANCH}"
             else
+              COMMIT_MSG=$(git log -1 --pretty=%B "${{ github.sha }}")
+              PR_NUMBER=$(echo "$COMMIT_MSG" | grep -oE '#[0-9]+' | head -1 | tr -d '#')
+              echo "Commit message (last): ${COMMIT_MSG}"
+              echo "Parsed PR number: ${PR_NUMBER}"
+
+              if [ -n "$PR_NUMBER" ]; then
+                PR_JSON=$(curl -s \
+                  -H "Authorization: Bearer ${GH_TOKEN}" \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "X-GitHub-Api-Version: 2022-11-28" \
+                  "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}")
+
+                SOURCE_BRANCH=$(echo "$PR_JSON" | jq -r '.head.ref // empty')
+
+                if [ -n "$SOURCE_BRANCH" ]; then
+                  echo "Resolved source branch from commit message PR #${PR_NUMBER}: ${SOURCE_BRANCH}"
+                fi
+              fi
+            fi
+
+            if [ -z "$SOURCE_BRANCH" ]; then
               SOURCE_BRANCH="${{ github.ref_name }}"
               echo "No PR found for commit. Using ref: ${SOURCE_BRANCH}"
             fi
