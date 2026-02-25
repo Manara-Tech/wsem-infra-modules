@@ -32,7 +32,7 @@ jobs:
   #  Centralises the branch-name → bump-type
   #  logic so both jobs share identical rules.
   # ═══════════════════════════════════════════
-  detect-bump:
+detect-bump:
     name: Detect Version Bump Type
     runs-on: ubuntu-latest
     if: github.actor != 'github-actions[bot]'
@@ -51,15 +51,37 @@ jobs:
         id: resolve
         run: |
           if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # On PR event, head_ref is directly available
             SOURCE_BRANCH="${{ github.head_ref }}"
+
           else
-            COMMIT_MSG=$(git log -1 --pretty=%s)
-            echo "Merge commit message: ${COMMIT_MSG}"
-            SOURCE_BRANCH=$(echo "$COMMIT_MSG" | sed -n 's|.*from [^/]*/\(hotfix/[^ ]*\|feature/[^ ]*\|release/[^ ]*\).*|\1|p')
+            # On push/merge event, read the bump label set during PR review
+            PR_NUMBER=$(curl -s \
+              -H "Authorization: Bearer ${{ secrets.RELEASE_PAT }}" \
+              "https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
+              | jq -r '.[0].number')
+
+            echo "PR number: ${PR_NUMBER}"
+
+            LABEL=$(curl -s \
+              -H "Authorization: Bearer ${{ secrets.RELEASE_PAT }}" \
+              "https://api.github.com/repos/${{ github.repository }}/issues/${PR_NUMBER}/labels" \
+              | jq -r '.[].name' | grep '^bump:' | head -1)
+
+            echo "Found label: ${LABEL}"
+
+            # Map label back to a branch-style string so existing logic still works
+            case "$LABEL" in
+              bump:major) SOURCE_BRANCH="release/from-label" ;;
+              bump:minor) SOURCE_BRANCH="feature/from-label" ;;
+              bump:patch) SOURCE_BRANCH="hotfix/from-label" ;;
+              *)          SOURCE_BRANCH="" ;;
+            esac
           fi
 
           echo "source_branch=${SOURCE_BRANCH}" >> "$GITHUB_OUTPUT"
 
+          # ── Map branch prefix → bump type ──────────────────────────
           if [[ "$SOURCE_BRANCH" == hotfix/* ]]; then
             BUMP="patch"
           elif [[ "$SOURCE_BRANCH" == feature/* ]]; then
@@ -74,7 +96,7 @@ jobs:
 
           echo "bump_type=${BUMP}" >> "$GITHUB_OUTPUT"
           echo "### 🔍 Detected bump type: \`${BUMP}\` (from branch: \`${SOURCE_BRANCH}\`)" >> "$GITHUB_STEP_SUMMARY"
-          
+
   # ═══════════════════════════════════════════
   #  JOB 2 — PR PREVIEW
   #  Only runs on pull_request events.
